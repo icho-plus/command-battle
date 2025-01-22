@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -9,7 +10,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: TitleScreen(), // 初期画面をタイトル画面に設定
+      home: TitleScreen(),
     );
   }
 }
@@ -33,7 +34,6 @@ class TitleScreen extends StatelessWidget {
             SizedBox(height: 40),
             ElevatedButton(
               onPressed: () {
-                // ボタンを押すとゲーム画面に遷移
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => MkdirApp()),
@@ -58,98 +58,180 @@ class MkdirApp extends StatefulWidget {
 
 class _MkdirAppState extends State<MkdirApp> {
   final TextEditingController _controller = TextEditingController();
-  final FocusNode _focusNode = FocusNode(); // フォーカスノードを作成
-  final Map<int, String?> _items = {}; // インデックスと名前のマップ
-  int playerPosition = 0; // プレイヤーの位置を保持
-  bool isGameOver = false; // ゲームオーバーフラグ
+  final FocusNode _focusNode = FocusNode();
+  final Map<int, String?> _items = {};
+  int playerPosition = 0;
+  int enemyPosition = 0;
+  bool isGameOver = false;
+  bool isPlayerTurn = true;
+  String gameResult = '';
 
   @override
   void initState() {
     super.initState();
-    _initializeSquares();
-    // アプリ起動時に自動的に入力欄にフォーカスを当てる
+    _initializeGame();
     _focusNode.requestFocus();
   }
 
-  void _initializeSquares() {
-    // ゲームが開始したときに状態をリセット
+  void _initializeGame() {
     setState(() {
       isGameOver = false;
+      isPlayerTurn = true;
+      gameResult = '';
       _items.clear();
-      // a〜y (25文字) を作成
+
+      // 初期の四角形を作成
       List<String> alphabet = List.generate(25, (index) => String.fromCharCode(97 + index));
       for (int i = 0; i < alphabet.length; i++) {
         _items[i] = alphabet[i];
       }
-      // プレイヤーは一番左上の四角形として緑色にする
-      _items[0] = 'プレイヤー';  // プレイヤーの名前
-      playerPosition = 0;  // プレイヤーの位置
+
+      // プレイヤーと敵の初期位置を設定
+      playerPosition = 0; // プレイヤーは左上
+      _items[playerPosition] = 'プレイヤー';
+
+      Random random = Random();
+      do {
+        enemyPosition = random.nextInt(25); // 敵はランダム位置
+      } while (enemyPosition == playerPosition); // プレイヤーの位置と被らないように
+      _items[enemyPosition] = '敵';
     });
   }
 
-  void _handleExecute() {
-    String input = _controller.text.trim();
+  void _handlePlayerCommand(String input) {
+    if (isGameOver || !isPlayerTurn) return;
+
     final mkdirRegex = RegExp(r'^mkdir\s+(.+)$');
     final rmRegex = RegExp(r'^rm\s+(.+)$');
-    final cdRegex = RegExp(r'^cd\s+(.+)$'); // cdコマンド用の正規表現
+    final cdRegex = RegExp(r'^cd\s+(.+)$');
 
     if (mkdirRegex.hasMatch(input)) {
       String dirName = mkdirRegex.firstMatch(input)!.group(1)!;
-
-      // すでに作成済みの名前があるか確認
       if (_items.values.contains(dirName)) {
-        _showErrorDialog(message: 'エラー: すでに "${dirName}" は作成されています。');
-        return;
-      }
-
-      setState(() {
-        // 空いている最初のインデックスに追加
-        for (int i = 0; i < 100; i++) {
-          if (_items[i] == null) {
-            _items[i] = dirName;
-            break;
+        _showErrorDialog(message: 'エラー: "${dirName}" は既に存在しています。');
+      } else {
+        setState(() {
+          for (int i = 0; i < 100; i++) {
+            if (_items[i] == null) {
+              _items[i] = dirName;
+              break;
+            }
           }
-        }
-      });
-      _controller.clear();
+        });
+      }
     } else if (rmRegex.hasMatch(input)) {
       String dirName = rmRegex.firstMatch(input)!.group(1)!;
-
-      setState(() {
-        // 名前が一致する最初のアイテムを削除
-        for (int i = 0; i < _items.length; i++) {
-          if (_items[i] == dirName) {
-            if (i == playerPosition) {
-              // プレイヤーがいる四角形が削除された場合
-              isGameOver = true;
-            }
-            _items[i] = null;
-            break; // 最初に一致したものを削除したらループを抜ける
+      if (_items.values.contains(dirName)) {
+        setState(() {
+          int targetIndex = _items.keys.firstWhere((index) => _items[index] == dirName);
+          if (targetIndex == playerPosition) {
+            _endGame('あなたの負け');
+          } else if (targetIndex == enemyPosition) {
+            _endGame('あなたの勝ち');
+          } else {
+            _items[targetIndex] = null;
           }
-        }
-      });
-      _controller.clear();
+        });
+      } else {
+        _showErrorDialog(message: 'エラー: "${dirName}" は存在しません。');
+      }
     } else if (cdRegex.hasMatch(input)) {
       String dirName = cdRegex.firstMatch(input)!.group(1)!;
-
-      // 同じ名前の四角形が存在するか確認
-      bool exists = _items.values.any((name) => name == dirName);
-      if (exists) {
+      if (_items.values.contains(dirName)) {
         setState(() {
-          // プレイヤーを移動させる
           playerPosition = _items.keys.firstWhere((index) => _items[index] == dirName);
         });
-        _controller.clear();
       } else {
         _showErrorDialog(message: 'エラー: "${dirName}" は存在しません。');
       }
     } else {
       _showErrorDialog(
-          message: 'コマンドは以下の形式で入力してください:\n\n1. mkdir [ディレクトリ名]\n2. rm [ディレクトリ名]\n3. cd [ディレクトリ名]');
+          message: 'コマンドは以下の形式で入力してください:\n1. mkdir [名前]\n2. rm [名前]\n3. cd [名前]');
     }
 
-    // 実行後にフォーカスをTextFieldに戻す
-    FocusScope.of(context).requestFocus(_focusNode);
+    _controller.clear();
+    _focusNode.requestFocus();
+
+    // プレイヤーのターンが終了したら敵のターンを開始
+    setState(() {
+      isPlayerTurn = false;
+    });
+    Future.delayed(Duration(seconds: 1), _handleEnemyTurn);
+  }
+
+  void _handleEnemyTurn() {
+    if (isGameOver) return;
+
+    Random random = Random();
+    List<int> availableIndexes = _items.keys.where((index) => _items[index] == null).toList();
+    List<int> removableIndexes = _items.keys
+        .where((index) => index != enemyPosition && _items[index] != null)
+        .toList();
+    List<int> movableIndexes = _items.keys
+        .where((index) => index != playerPosition && _items[index] != null)
+        .toList();
+
+    String? command;
+    int actionType = random.nextInt(3); // 0: mkdir, 1: rm, 2: cd
+
+    switch (actionType) {
+      case 0: // mkdir
+        if (availableIndexes.isNotEmpty) {
+          int targetIndex = availableIndexes[random.nextInt(availableIndexes.length)];
+          String dirName = '敵_${targetIndex}';
+          setState(() {
+            _items[targetIndex] = dirName;
+            command = 'mkdir $dirName';
+          });
+        }
+        break;
+
+      case 1: // rm
+        if (removableIndexes.isNotEmpty) {
+          int targetIndex = removableIndexes[random.nextInt(removableIndexes.length)];
+          String? dirName = _items[targetIndex];
+          setState(() {
+            if (targetIndex == playerPosition) {
+              _endGame('あなたの負け');
+            } else if (targetIndex == enemyPosition) {
+              // 敵が自身の位置を削除しない
+            } else {
+              _items[targetIndex] = null;
+              command = 'rm $dirName';
+            }
+          });
+        }
+        break;
+
+      case 2: // cd
+        if (movableIndexes.isNotEmpty) {
+          int targetIndex = movableIndexes[random.nextInt(movableIndexes.length)];
+          setState(() {
+            enemyPosition = targetIndex;
+            command = 'cd ${_items[targetIndex]}';
+          });
+        }
+        break;
+    }
+
+    // デバッグ: 敵の選択したコマンドを表示
+    if (command != null) {
+      print('敵: $command');
+    }
+
+    // プレイヤーのターンに移行
+    setState(() {
+      isPlayerTurn = true;
+    });
+  }
+
+
+
+  void _endGame(String result) {
+    setState(() {
+      isGameOver = true;
+      gameResult = result;
+    });
   }
 
   void _showErrorDialog({required String message}) {
@@ -168,41 +250,35 @@ class _MkdirAppState extends State<MkdirApp> {
     );
   }
 
-  void _resetGame() {
-    // ゲームをリセット
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => MkdirApp()),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     if (isGameOver) {
-      // ゲームオーバー画面を表示
       return Scaffold(
         appBar: AppBar(
-          title: Text('GAME OVER'),
+          title: Text('Game Over'),
         ),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                'Game Over',
-                style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.red),
+                gameResult,
+                style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 20),
               ElevatedButton(
-                onPressed: _resetGame,
+                onPressed: () => Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => TitleScreen()),
+                ),
                 child: Text('タイトルに戻る'),
               ),
               SizedBox(height: 20),
               ElevatedButton(
-                onPressed: () {
-                  _resetGame();
-                  _initializeSquares();  // 初期化して再開
-                },
+                onPressed: () => Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => MkdirApp()),
+                ),
                 child: Text('もう一度遊ぶ'),
               ),
             ],
@@ -218,52 +294,39 @@ class _MkdirAppState extends State<MkdirApp> {
       body: Column(
         children: [
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: GridView.builder(
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 5, // 横5列
-                  crossAxisSpacing: 8.0,
-                  mainAxisSpacing: 8.0,
-                ),
-                itemCount: _items.length,
-                itemBuilder: (context, index) {
-                  if (_items.containsKey(index) && _items[index] != null) {
-                    // プレイヤーの位置を反映
-                    Color squareColor = index == playerPosition
-                        ? Colors.green
-                        : Colors.yellow; // プレイヤーの位置は緑色
-                    return Container(
-                      color: squareColor,
-                      child: Center(
-                        child: Text(
-                          _items[index]!,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    );
-                  } else {
-                    return Container(); // 空の四角形
-                  }
-                },
+            child: GridView.builder(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 5,
               ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              controller: _controller,
-              focusNode: _focusNode, // フォーカスノードを指定
-              decoration: InputDecoration(
-                hintText: '例: mkdir testDir または rm testDir または cd testDir',
-                border: OutlineInputBorder(),
-              ),
-              onSubmitted: (input) {
-                // Enterキーが押された時にコマンドを実行
-                _handleExecute();
+              itemCount: 25,
+              itemBuilder: (context, index) {
+                Color squareColor = Colors.grey[300]!;
+                if (index == playerPosition) {
+                  squareColor = Colors.blue; // プレイヤーの色
+                } else if (index == enemyPosition) {
+                  squareColor = Colors.red; // 敵の色
+                } else if (_items[index] != null) {
+                  squareColor = Colors.yellow; // 存在する四角形の色
+                }
+
+                return Container(
+                  margin: EdgeInsets.all(2),
+                  color: squareColor,
+                  child: Center(
+                    child: Text(
+                      _items[index] ?? '',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                  ),
+                );
               },
             ),
+          ),
+          TextField(
+            controller: _controller,
+            focusNode: _focusNode,
+            decoration: InputDecoration(hintText: 'コマンドを入力してください'),
+            onSubmitted: _handlePlayerCommand,
           ),
         ],
       ),
