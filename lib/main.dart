@@ -60,6 +60,9 @@ class _MkdirAppState extends State<MkdirApp> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   final Map<int, String?> _items = {};
+  final List<String> _history = [];
+  final ScrollController _scrollController = ScrollController();
+
   int playerPosition = 0;
   int enemyPosition = 0;
   bool isGameOver = false;
@@ -79,6 +82,7 @@ class _MkdirAppState extends State<MkdirApp> {
       isPlayerTurn = true;
       gameResult = '';
       _items.clear();
+      _history.clear();
 
       // 初期の四角形を作成
       List<String> alphabet = List.generate(25, (index) => String.fromCharCode(97 + index));
@@ -95,6 +99,17 @@ class _MkdirAppState extends State<MkdirApp> {
         enemyPosition = random.nextInt(25); // 敵はランダム位置
       } while (enemyPosition == playerPosition); // プレイヤーの位置と被らないように
       _items[enemyPosition] = '敵';
+    });
+  }
+
+  void _addToHistory(String message) {
+    setState(() {
+      _history.add(message);
+      if (_scrollController.hasClients) {
+        Future.delayed(Duration(milliseconds: 100), () {
+          _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+        });
+      }
     });
   }
 
@@ -118,6 +133,7 @@ class _MkdirAppState extends State<MkdirApp> {
             }
           }
         });
+        _addToHistory('プレイヤー: mkdir $dirName');
       }
     } else if (rmRegex.hasMatch(input)) {
       String dirName = rmRegex.firstMatch(input)!.group(1)!;
@@ -132,6 +148,7 @@ class _MkdirAppState extends State<MkdirApp> {
             _items[targetIndex] = null;
           }
         });
+        _addToHistory('プレイヤー: rm $dirName');
       } else {
         _showErrorDialog(message: 'エラー: "${dirName}" は存在しません。');
       }
@@ -141,6 +158,7 @@ class _MkdirAppState extends State<MkdirApp> {
         setState(() {
           playerPosition = _items.keys.firstWhere((index) => _items[index] == dirName);
         });
+        _addToHistory('プレイヤー: cd $dirName');
       } else {
         _showErrorDialog(message: 'エラー: "${dirName}" は存在しません。');
       }
@@ -214,9 +232,8 @@ class _MkdirAppState extends State<MkdirApp> {
         break;
     }
 
-    // デバッグ: 敵の選択したコマンドを表示
     if (command != null) {
-      print('敵: $command');
+      _addToHistory('敵: $command');
     }
 
     // プレイヤーのターンに移行
@@ -224,8 +241,6 @@ class _MkdirAppState extends State<MkdirApp> {
       isPlayerTurn = true;
     });
   }
-
-
 
   void _endGame(String result) {
     setState(() {
@@ -286,7 +301,6 @@ class _MkdirAppState extends State<MkdirApp> {
         ),
       );
     }
-
     return Scaffold(
       appBar: AppBar(
         title: Text('COMMAND BATTLE'),
@@ -302,11 +316,11 @@ class _MkdirAppState extends State<MkdirApp> {
               itemBuilder: (context, index) {
                 Color squareColor = Colors.grey[300]!;
                 if (index == playerPosition) {
-                  squareColor = Colors.blue; // プレイヤーの色
+                  squareColor = Colors.blue;
                 } else if (index == enemyPosition) {
-                  squareColor = Colors.red; // 敵の色
+                  squareColor = Colors.red;
                 } else if (_items[index] != null) {
-                  squareColor = Colors.yellow; // 存在する四角形の色
+                  squareColor = Colors.yellow;
                 }
 
                 return Container(
@@ -319,6 +333,16 @@ class _MkdirAppState extends State<MkdirApp> {
                     ),
                   ),
                 );
+              },
+            ),
+          ),
+          SizedBox(
+            height: 40, // 履歴欄の高さ
+            child: ListView.builder(
+              controller: _scrollController,
+              itemCount: _history.length,
+              itemBuilder: (context, index) {
+                return Text(_history[index]);
               },
             ),
           ),
