@@ -92,13 +92,11 @@ class _MkdirAppState extends State<MkdirApp> {
 
       // プレイヤーと敵の初期位置を設定
       playerPosition = 0; // プレイヤーは左上
-      _items[playerPosition] = 'プレイヤー';
 
       Random random = Random();
       do {
         enemyPosition = random.nextInt(25); // 敵はランダム位置
       } while (enemyPosition == playerPosition); // プレイヤーの位置と被らないように
-      _items[enemyPosition] = '敵';
     });
   }
 
@@ -123,7 +121,7 @@ class _MkdirAppState extends State<MkdirApp> {
     if (mkdirRegex.hasMatch(input)) {
       String dirName = mkdirRegex.firstMatch(input)!.group(1)!;
       if (_items.values.contains(dirName)) {
-        _showErrorDialog(message: 'エラー: "${dirName}" は既に存在しています。');
+        _addToHistory('エラー: "${dirName}" は既に存在しています。');
       } else {
         setState(() {
           for (int i = 0; i < 100; i++) {
@@ -150,7 +148,7 @@ class _MkdirAppState extends State<MkdirApp> {
         });
         _addToHistory('プレイヤー: rm $dirName');
       } else {
-        _showErrorDialog(message: 'エラー: "${dirName}" は存在しません。');
+        _addToHistory('エラー: "${dirName}" は存在しません。');
       }
     } else if (cdRegex.hasMatch(input)) {
       String dirName = cdRegex.firstMatch(input)!.group(1)!;
@@ -160,11 +158,10 @@ class _MkdirAppState extends State<MkdirApp> {
         });
         _addToHistory('プレイヤー: cd $dirName');
       } else {
-        _showErrorDialog(message: 'エラー: "${dirName}" は存在しません。');
+        _addToHistory('エラー: "${dirName}" は存在しません。');
       }
     } else {
-      _showErrorDialog(
-          message: 'コマンドは以下の形式で入力してください:\n1. mkdir [名前]\n2. rm [名前]\n3. cd [名前]');
+      _addToHistory('エラー: コマンドは以下の形式で入力してください:\n1. mkdir [名前]\n2. rm [名前]\n3. cd [名前]');
     }
 
     _controller.clear();
@@ -176,6 +173,7 @@ class _MkdirAppState extends State<MkdirApp> {
     });
     Future.delayed(Duration(seconds: 1), _handleEnemyTurn);
   }
+
 
   void _handleEnemyTurn() {
     if (isGameOver) return;
@@ -249,21 +247,25 @@ class _MkdirAppState extends State<MkdirApp> {
     });
   }
 
-  void _showErrorDialog({required String message}) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('エラー'),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
+  // void _showErrorDialog({required String message}) {
+  //   // エラーメッセージを履歴に追加
+  //   _addToHistory('エラー: $message');
+  //
+  //   showDialog(
+  //     context: context,
+  //     builder: (context) => AlertDialog(
+  //       title: Text('エラー'),
+  //       content: Text(message),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.of(context).pop(),
+  //           child: Text('OK'),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
+
 
   @override
   Widget build(BuildContext context) {
