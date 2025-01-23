@@ -2,20 +2,30 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: TitleScreen(),
+      theme: ThemeData(
+        scaffoldBackgroundColor: Colors.black, // 背景を黒に設定
+        textTheme: const TextTheme(
+          bodyMedium: TextStyle(color: Colors.white), // デフォルトのテキスト色を白に設定
+        ),
+      ),
+      home: const TitleScreen(),
     );
   }
 }
 
 class TitleScreen extends StatelessWidget {
+  const TitleScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -23,23 +33,24 @@ class TitleScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
+            const Text(
               'COMMAND BATTLE',
               style: TextStyle(
                 fontSize: 36,
                 fontWeight: FontWeight.bold,
+                //color: Colors.white, // 白色に設定
               ),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: 40),
+            const SizedBox(height: 40),
             ElevatedButton(
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => MkdirApp()),
+                  MaterialPageRoute(builder: (context) => const MkdirApp()),
                 );
               },
-              child: Text(
+              child: const Text(
                 '始める',
                 style: TextStyle(fontSize: 20),
               ),
@@ -52,6 +63,8 @@ class TitleScreen extends StatelessWidget {
 }
 
 class MkdirApp extends StatefulWidget {
+  const MkdirApp({super.key});
+
   @override
   _MkdirAppState createState() => _MkdirAppState();
 }
@@ -62,12 +75,17 @@ class _MkdirAppState extends State<MkdirApp> {
   final Map<int, String?> _items = {};
   final List<String> _history = [];
   final ScrollController _scrollController = ScrollController();
+  final int totalSquares = 21; // 四角形の総数
+  final int crossAxisCount = 7; // 1行に表示する四角形の数
+  final double crossAxisSpacing = 4; // 列間の間隔
+  final double mainAxisSpacing = 4; // 行間の間隔
 
   int playerPosition = 0;
   int enemyPosition = 0;
   bool isGameOver = false;
   bool isPlayerTurn = true;
   String gameResult = '';
+
 
   @override
   void initState() {
@@ -85,7 +103,7 @@ class _MkdirAppState extends State<MkdirApp> {
       _history.clear();
 
       // 初期の四角形を作成
-      List<String> alphabet = List.generate(25, (index) => String.fromCharCode(97 + index));
+      List<String> alphabet = List.generate(totalSquares, (index) => String.fromCharCode(97 + index));
       for (int i = 0; i < alphabet.length; i++) {
         _items[i] = alphabet[i];
       }
@@ -95,7 +113,7 @@ class _MkdirAppState extends State<MkdirApp> {
 
       Random random = Random();
       do {
-        enemyPosition = random.nextInt(25); // 敵はランダム位置
+        enemyPosition = random.nextInt(totalSquares); // 敵はランダム位置
       } while (enemyPosition == playerPosition); // プレイヤーの位置と被らないように
     });
   }
@@ -104,7 +122,7 @@ class _MkdirAppState extends State<MkdirApp> {
     setState(() {
       _history.add(message);
       if (_scrollController.hasClients) {
-        Future.delayed(Duration(milliseconds: 100), () {
+        Future.delayed(const Duration(milliseconds: 100), () {
           _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
         });
       }
@@ -121,7 +139,7 @@ class _MkdirAppState extends State<MkdirApp> {
     if (mkdirRegex.hasMatch(input)) {
       String dirName = mkdirRegex.firstMatch(input)!.group(1)!;
       if (_items.values.contains(dirName)) {
-        _addToHistory('エラー: "${dirName}" は既に存在しています。');
+        _addToHistory('エラー: "$dirName" は既に存在しています。');
       } else {
         setState(() {
           for (int i = 0; i < 100; i++) {
@@ -148,7 +166,7 @@ class _MkdirAppState extends State<MkdirApp> {
         });
         _addToHistory('プレイヤー: rm $dirName');
       } else {
-        _addToHistory('エラー: "${dirName}" は存在しません。');
+        _addToHistory('エラー: "$dirName" は存在しません。');
       }
     } else if (cdRegex.hasMatch(input)) {
       String dirName = cdRegex.firstMatch(input)!.group(1)!;
@@ -158,7 +176,7 @@ class _MkdirAppState extends State<MkdirApp> {
         });
         _addToHistory('プレイヤー: cd $dirName');
       } else {
-        _addToHistory('エラー: "${dirName}" は存在しません。');
+        _addToHistory('エラー: "$dirName" は存在しません。');
       }
     } else {
       _addToHistory('エラー: コマンドは以下の形式で入力してください:\n1. mkdir [名前]\n2. rm [名前]\n3. cd [名前]');
@@ -171,7 +189,7 @@ class _MkdirAppState extends State<MkdirApp> {
     setState(() {
       isPlayerTurn = false;
     });
-    Future.delayed(Duration(seconds: 1), _handleEnemyTurn);
+    Future.delayed(const Duration(seconds: 1), _handleEnemyTurn);
   }
 
 
@@ -194,7 +212,7 @@ class _MkdirAppState extends State<MkdirApp> {
       case 0: // mkdir
         if (availableIndexes.isNotEmpty) {
           int targetIndex = availableIndexes[random.nextInt(availableIndexes.length)];
-          String dirName = '敵_${targetIndex}';
+          String dirName = '$targetIndex';
           setState(() {
             _items[targetIndex] = dirName;
             command = 'mkdir $dirName';
@@ -272,7 +290,8 @@ class _MkdirAppState extends State<MkdirApp> {
     if (isGameOver) {
       return Scaffold(
         appBar: AppBar(
-          title: Text('Game Over'),
+          title: const Text('Game Over'),
+          backgroundColor: Colors.black, // AppBar背景色を黒に
         ),
         body: Center(
           child: Column(
@@ -280,23 +299,23 @@ class _MkdirAppState extends State<MkdirApp> {
             children: [
               Text(
                 gameResult,
-                style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.white), // 白色
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () => Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (context) => TitleScreen()),
+                  MaterialPageRoute(builder: (context) => const TitleScreen()),
                 ),
-                child: Text('タイトルに戻る'),
+                child: const Text('タイトルに戻る'),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () => Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (context) => MkdirApp()),
+                  MaterialPageRoute(builder: (context) => const MkdirApp()),
                 ),
-                child: Text('もう一度遊ぶ'),
+                child: const Text('もう一度遊ぶ'),
               ),
             ],
           ),
@@ -305,16 +324,20 @@ class _MkdirAppState extends State<MkdirApp> {
     }
     return Scaffold(
       appBar: AppBar(
-        title: Text('COMMAND BATTLE'),
+        title: const Text('COMMAND BATTLE'),
+        backgroundColor: Colors.black, // AppBarの背景色を黒に設定
+        foregroundColor: Colors.white, // 戻るボタンやアイコンの色を白に設定
       ),
       body: Column(
         children: [
           Expanded(
             child: GridView.builder(
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 5,
+                crossAxisCount: crossAxisCount, // 四角形を縮小するために列の数を増やす
+                crossAxisSpacing: crossAxisSpacing, // 列間の間隔
+                mainAxisSpacing: mainAxisSpacing, // 行間の間隔
               ),
-              itemCount: 25,
+              itemCount: totalSquares,
               itemBuilder: (context, index) {
                 Color squareColor = Colors.grey[300]!;
                 if (index == playerPosition) {
@@ -326,12 +349,16 @@ class _MkdirAppState extends State<MkdirApp> {
                 }
 
                 return Container(
-                  margin: EdgeInsets.all(2),
+                  margin: const EdgeInsets.all(2),
                   color: squareColor,
                   child: Center(
                     child: Text(
                       _items[index] ?? '',
-                      style: TextStyle(fontSize: 14),
+                      style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.black, //四角形のテキストの色
+                      ),
+
                     ),
                   ),
                 );
@@ -339,7 +366,7 @@ class _MkdirAppState extends State<MkdirApp> {
             ),
           ),
           SizedBox(
-            height: 40, // 履歴欄の高さ
+            height: 140, // 履歴欄の高さ
             child: ListView.builder(
               controller: _scrollController,
               itemCount: _history.length,
@@ -351,7 +378,13 @@ class _MkdirAppState extends State<MkdirApp> {
           TextField(
             controller: _controller,
             focusNode: _focusNode,
-            decoration: InputDecoration(hintText: 'コマンドを入力してください'),
+            style: const TextStyle(
+              color: Colors.green, // 入力文字の色
+            ),
+            decoration: const InputDecoration(
+              hintText: 'コマンドを入力してください',
+              hintStyle: TextStyle(color: Colors.green), // プレースホルダーの色
+            ),
             onSubmitted: _handlePlayerCommand,
           ),
         ],
