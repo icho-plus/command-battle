@@ -1,4 +1,4 @@
-# commandgame
+# COMMAND BATTLE
 
 A new Flutter project.
 
