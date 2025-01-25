@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';// KeyEvent を扱うために必要
 
 void main() {
   runApp(const MyApp());
@@ -23,39 +24,72 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class TitleScreen extends StatelessWidget {
+
+class TitleScreen extends StatefulWidget {
   const TitleScreen({super.key});
+
+  @override
+  State<TitleScreen> createState() => _TitleScreenState();
+}
+
+class _TitleScreenState extends State<TitleScreen> {
+  late FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode = FocusNode();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusNode.requestFocus(); // 画面表示後にフォーカスを与える
+    });
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose(); // メモリリーク防止のために破棄
+    super.dispose();
+  }
+
+  void _navigateToNextScreen(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const MkdirApp()),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              'COMMAND BATTLE',
-              style: TextStyle(
-                fontSize: 36,
-                fontWeight: FontWeight.bold,
-                //color: Colors.white, // 白色に設定
+      body: KeyboardListener(
+        focusNode: _focusNode,
+        autofocus: true, // 自動的にフォーカスを設定
+        onKeyEvent: (KeyEvent event) {
+          if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyS) {
+            _navigateToNextScreen(context);
+          }
+        },
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                'COMMAND BATTLE',
+                style: TextStyle(
+                  fontSize: 36,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 40),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const MkdirApp()),
-                );
-              },
-              child: const Text(
-                '始める',
-                style: TextStyle(fontSize: 20),
+              const SizedBox(height: 40),
+              ElevatedButton(
+                onPressed: () => _navigateToNextScreen(context),
+                child: const Text(
+                  '始める[s]',
+                  style: TextStyle(fontSize: 20),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -72,6 +106,7 @@ class MkdirApp extends StatefulWidget {
 class _MkdirAppState extends State<MkdirApp> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
+  final FocusNode _keyboardFocusNode = FocusNode(); // キーボードイベント用
   final Map<int, String?> _items = {};
   final List<String> _history = [];
   final ScrollController _scrollController = ScrollController();
@@ -92,6 +127,16 @@ class _MkdirAppState extends State<MkdirApp> {
     super.initState();
     _initializeGame();
     _focusNode.requestFocus();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _keyboardFocusNode.requestFocus(); // キーボードのフォーカスを設定
+    });
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    _keyboardFocusNode.dispose(); // キーボードフォーカスを破棄
+    super.dispose();
   }
 
   void _initializeGame() {
@@ -135,6 +180,7 @@ class _MkdirAppState extends State<MkdirApp> {
     final mkdirRegex = RegExp(r'^mkdir\s+(.+)$');
     final rmRegex = RegExp(r'^rm\s+(.+)$');
     final cdRegex = RegExp(r'^cd\s+(.+)$');
+    final exitRegex = RegExp(r'^exit$');
 
     if (mkdirRegex.hasMatch(input)) {
       String dirName = mkdirRegex.firstMatch(input)!.group(1)!;
@@ -157,9 +203,9 @@ class _MkdirAppState extends State<MkdirApp> {
         setState(() {
           int targetIndex = _items.keys.firstWhere((index) => _items[index] == dirName);
           if (targetIndex == playerPosition) {
-            _endGame('あなたの負け');
+            _endGame('Defeat...');
           } else if (targetIndex == enemyPosition) {
-            _endGame('あなたの勝ち');
+            _endGame('Win!');
           } else {
             _items[targetIndex] = null;
           }
@@ -178,6 +224,11 @@ class _MkdirAppState extends State<MkdirApp> {
       } else {
         _addToHistory('エラー: "$dirName" は存在しません。');
       }
+    }else if(exitRegex.hasMatch(input)){
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const TitleScreen()), // タイトル画面に戻る
+      );
     } else {
       _addToHistory('エラー: コマンドは以下の形式で入力してください:\n1. mkdir [名前]\n2. rm [名前]\n3. cd [名前]');
     }
@@ -212,7 +263,7 @@ class _MkdirAppState extends State<MkdirApp> {
       case 0: // mkdir
         if (availableIndexes.isNotEmpty) {
           int targetIndex = availableIndexes[random.nextInt(availableIndexes.length)];
-          String dirName = '$targetIndex';
+          String dirName = String.fromCharCode(targetIndex+97);
           setState(() {
             _items[targetIndex] = dirName;
             command = 'mkdir $dirName';
@@ -226,7 +277,7 @@ class _MkdirAppState extends State<MkdirApp> {
           String? dirName = _items[targetIndex];
           setState(() {
             if (targetIndex == playerPosition) {
-              _endGame('あなたの負け');
+              _endGame('Defeat...');
             } else if (targetIndex == enemyPosition) {
               // 敵が自身の位置を削除しない
             } else {
@@ -249,7 +300,7 @@ class _MkdirAppState extends State<MkdirApp> {
     }
 
     if (command != null) {
-      _addToHistory('敵: $command');
+      // _addToHistory('敵: $command');
     }
 
     // プレイヤーのターンに移行
@@ -293,7 +344,24 @@ class _MkdirAppState extends State<MkdirApp> {
           title: const Text('Game Over'),
           backgroundColor: Colors.black, // AppBar背景色を黒に
         ),
-        body: Center(
+          body: KeyboardListener(
+            focusNode: _keyboardFocusNode,
+            onKeyEvent: (event) {
+              if (event is KeyDownEvent) {
+                if (event.logicalKey == LogicalKeyboardKey.keyT) {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => const TitleScreen()),
+                  );
+                } else if (event.logicalKey == LogicalKeyboardKey.keyR) {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => const MkdirApp()),
+                  );
+                }
+              }
+            },
+        child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -307,7 +375,7 @@ class _MkdirAppState extends State<MkdirApp> {
                   context,
                   MaterialPageRoute(builder: (context) => const TitleScreen()),
                 ),
-                child: const Text('タイトルに戻る'),
+                child: const Text('タイトルに戻る[t]'),
               ),
               const SizedBox(height: 20),
               ElevatedButton(
@@ -315,11 +383,12 @@ class _MkdirAppState extends State<MkdirApp> {
                   context,
                   MaterialPageRoute(builder: (context) => const MkdirApp()),
                 ),
-                child: const Text('もう一度遊ぶ'),
+                child: const Text('もう一度遊ぶ[r]'),
               ),
             ],
           ),
         ),
+      ),
       );
     }
     return Scaffold(
@@ -343,7 +412,8 @@ class _MkdirAppState extends State<MkdirApp> {
                 if (index == playerPosition) {
                   squareColor = Colors.blue;
                 } else if (index == enemyPosition) {
-                  squareColor = Colors.red;
+                  // squareColor = Colors.red;
+                  squareColor = Colors.yellow;
                 } else if (_items[index] != null) {
                   squareColor = Colors.yellow;
                 }
@@ -382,7 +452,7 @@ class _MkdirAppState extends State<MkdirApp> {
               color: Colors.green, // 入力文字の色
             ),
             decoration: const InputDecoration(
-              hintText: 'コマンドを入力してください',
+              hintText: 'mkdir:作成, rm:削除, cd:移動, exit:終了',
               hintStyle: TextStyle(color: Colors.green), // プレースホルダーの色
             ),
             onSubmitted: _handlePlayerCommand,
