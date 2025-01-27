@@ -107,7 +107,6 @@ class _MkdirAppState extends State<MkdirApp> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   final FocusNode _keyboardFocusNode = FocusNode(); // キーボードイベント用
-  final Map<int, String?> _items = {};
   final List<String> _history = [];
   final ScrollController _scrollController = ScrollController();
   final int totalSquares = 21; // 四角形の総数
@@ -120,7 +119,8 @@ class _MkdirAppState extends State<MkdirApp> {
   bool isGameOver = false;
   bool isPlayerTurn = true;
   String gameResult = '';
-
+  Map<int, String?> _items = {};
+  Map<int, String?> _stagedItems = {}; // 状態変更を一時的に保持
 
   @override
   void initState() {
@@ -180,6 +180,7 @@ class _MkdirAppState extends State<MkdirApp> {
     final mkdirRegex = RegExp(r'^mkdir\s+(.+)$');
     final rmRegex = RegExp(r'^rm\s+(.+)$');
     final cdRegex = RegExp(r'^cd\s+(.+)$');
+    final lsRegex = RegExp(r'^ls$');
     final exitRegex = RegExp(r'^exit$');
 
     if (mkdirRegex.hasMatch(input)) {
@@ -224,12 +225,17 @@ class _MkdirAppState extends State<MkdirApp> {
       } else {
         _addToHistory('エラー: "$dirName" は存在しません。');
       }
+    }else if(lsRegex.hasMatch(input)){
+      setState(() {
+        _items = Map.from(_stagedItems);
+      });
+      _addToHistory('プレイヤー: ls');
     }else if(exitRegex.hasMatch(input)){
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const TitleScreen()), // タイトル画面に戻る
       );
-    } else {
+    }else{
       _addToHistory('エラー: コマンドは以下の形式で入力してください:\n1. mkdir [名前]\n2. rm [名前]\n3. cd [名前]');
     }
 
