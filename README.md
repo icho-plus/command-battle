@@ -1,16 +1,28 @@
 # COMMAND BATTLE
+以下のフォルダに実行可能ファイルがあります。
 
-A new Flutter project.
+APP/macOS/commandgame.app
 
-## Getting Started
+## 目的
+GUIしか使ったことのないようなCLI初学者でも楽しく基本的なコマンドを覚えられること
 
-This project is a starting point for a Flutter application.
+## 特徴
+・CLI操作の可視化
 
-A few resources to get you started if this is your first Flutter project:
+・一貫したキーボード操作
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## 概要
+GUIとのギャップを減らしてCLIで遊ぶことができるため、負担なくコマンド操作を覚えることができます。
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+画面上にはフォルダを模した黄色の四角形が並んでおり、そのうち１つがプレイヤーの位置を表す青色になっています。基本コマンド"rm", "mkdir", "cd"を用いると、それぞれのコマンドに合った状態に黄色の四角形が変化します。
+
+ゲームではプレイヤー側に見えない敵をフォルダのいずれかに配置し、自分がいる位置のフォルダが消されたときに負けとなるゲーム性を追加しています。
+
+## 入力可コマンド
+rmdir+[空白]+[名前] : フォルダ作成（灰色のマスがない場合、黄色のマスを一つ作成）
+
+rm+[空白]+[名前] : フォルダ削除（指定したマスを削除）
+
+cd+[空白]+[名前] : プレイヤーのフォルダ移動（指定したマスの色を青色に変える）
+
+exit : ゲーム途中終了
