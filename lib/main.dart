@@ -239,7 +239,7 @@ class _MkdirAppState extends State<MkdirApp> {
         MaterialPageRoute(builder: (context) => const TitleScreen()), // タイトル画面に戻る
       );
     }else{
-      _addToHistory('エラー: コマンドは以下の形式で入力してください:\n1. mkdir [名前]\n2. rm [名前]\n3. cd [名前]');
+      _addToHistory('エラー: コマンドは以下の形式で入力してください:\n1. mkdir [名前]\n2. rm [名前]\n3. cd [名前]\n4. ls\n5. exit');
     }
 
     _controller.clear();
