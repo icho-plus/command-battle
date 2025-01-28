@@ -113,6 +113,8 @@ class _MkdirAppState extends State<MkdirApp> {
   final int crossAxisCount = 7; // 1行に表示する四角形の数
   final double crossAxisSpacing = 4; // 列間の間隔
   final double mainAxisSpacing = 4; // 行間の間隔
+  final double historyHeight = 140; // 履歴欄の高さ
+  final Map<int, String?> _stagedItems = {}; // 状態変更を一時的に保持
 
   int playerPosition = 0;
   int enemyPosition = 0;
@@ -120,7 +122,6 @@ class _MkdirAppState extends State<MkdirApp> {
   bool isPlayerTurn = true;
   String gameResult = '';
   Map<int, String?> _items = {};
-  Map<int, String?> _stagedItems = {}; // 状態変更を一時的に保持
 
   @override
   void initState() {
@@ -145,13 +146,15 @@ class _MkdirAppState extends State<MkdirApp> {
       isPlayerTurn = true;
       gameResult = '';
       _items.clear();
+      _stagedItems.clear();
       _history.clear();
 
       // 初期の四角形を作成
       List<String> alphabet = List.generate(totalSquares, (index) => String.fromCharCode(97 + index));
       for (int i = 0; i < alphabet.length; i++) {
-        _items[i] = alphabet[i];
+        _stagedItems[i] = alphabet[i];
       }
+      _items = Map.from(_stagedItems);
 
       // プレイヤーと敵の初期位置を設定
       playerPosition = 0; // プレイヤーは左上
@@ -185,13 +188,13 @@ class _MkdirAppState extends State<MkdirApp> {
 
     if (mkdirRegex.hasMatch(input)) {
       String dirName = mkdirRegex.firstMatch(input)!.group(1)!;
-      if (_items.values.contains(dirName)) {
+      if (_stagedItems.values.contains(dirName)) {
         _addToHistory('エラー: "$dirName" は既に存在しています。');
       } else {
         setState(() {
           for (int i = 0; i < 100; i++) {
-            if (_items[i] == null) {
-              _items[i] = dirName;
+            if (_stagedItems[i] == null) {
+              _stagedItems[i] = dirName;
               break;
             }
           }
@@ -200,15 +203,15 @@ class _MkdirAppState extends State<MkdirApp> {
       }
     } else if (rmRegex.hasMatch(input)) {
       String dirName = rmRegex.firstMatch(input)!.group(1)!;
-      if (_items.values.contains(dirName)) {
+      if (_stagedItems.values.contains(dirName)) {
         setState(() {
-          int targetIndex = _items.keys.firstWhere((index) => _items[index] == dirName);
+          int targetIndex = _stagedItems.keys.firstWhere((index) => _stagedItems[index] == dirName);
           if (targetIndex == playerPosition) {
             _endGame('Defeat...');
           } else if (targetIndex == enemyPosition) {
             _endGame('Win!');
           } else {
-            _items[targetIndex] = null;
+            _stagedItems[targetIndex] = null;
           }
         });
         _addToHistory('プレイヤー: rm $dirName');
@@ -217,9 +220,9 @@ class _MkdirAppState extends State<MkdirApp> {
       }
     } else if (cdRegex.hasMatch(input)) {
       String dirName = cdRegex.firstMatch(input)!.group(1)!;
-      if (_items.values.contains(dirName)) {
+      if (_stagedItems.values.contains(dirName)) {
         setState(() {
-          playerPosition = _items.keys.firstWhere((index) => _items[index] == dirName);
+          playerPosition = _stagedItems.keys.firstWhere((index) => _stagedItems[index] == dirName);
         });
         _addToHistory('プレイヤー: cd $dirName');
       } else {
@@ -254,12 +257,12 @@ class _MkdirAppState extends State<MkdirApp> {
     if (isGameOver) return;
 
     Random random = Random();
-    List<int> availableIndexes = _items.keys.where((index) => _items[index] == null).toList();
-    List<int> removableIndexes = _items.keys
-        .where((index) => index != enemyPosition && _items[index] != null)
+    List<int> availableIndexes = _stagedItems.keys.where((index) => _stagedItems[index] == null).toList();
+    List<int> removableIndexes = _stagedItems.keys
+        .where((index) => index != enemyPosition && _stagedItems[index] != null)
         .toList();
-    List<int> movableIndexes = _items.keys
-        .where((index) => index != playerPosition && _items[index] != null)
+    List<int> movableIndexes = _stagedItems.keys
+        .where((index) => index != playerPosition && _stagedItems[index] != null)
         .toList();
 
     String? command;
@@ -271,7 +274,7 @@ class _MkdirAppState extends State<MkdirApp> {
           int targetIndex = availableIndexes[random.nextInt(availableIndexes.length)];
           String dirName = String.fromCharCode(targetIndex+97);
           setState(() {
-            _items[targetIndex] = dirName;
+            _stagedItems[targetIndex] = dirName;
             command = 'mkdir $dirName';
           });
         }
@@ -280,14 +283,14 @@ class _MkdirAppState extends State<MkdirApp> {
       case 1: // rm
         if (removableIndexes.isNotEmpty) {
           int targetIndex = removableIndexes[random.nextInt(removableIndexes.length)];
-          String? dirName = _items[targetIndex];
+          String? dirName = _stagedItems[targetIndex];
           setState(() {
             if (targetIndex == playerPosition) {
               _endGame('Defeat...');
             } else if (targetIndex == enemyPosition) {
               // 敵が自身の位置を削除しない
             } else {
-              _items[targetIndex] = null;
+              _stagedItems[targetIndex] = null;
               command = 'rm $dirName';
             }
           });
@@ -299,14 +302,14 @@ class _MkdirAppState extends State<MkdirApp> {
           int targetIndex = movableIndexes[random.nextInt(movableIndexes.length)];
           setState(() {
             enemyPosition = targetIndex;
-            command = 'cd ${_items[targetIndex]}';
+            command = 'cd ${_stagedItems[targetIndex]}';
           });
         }
         break;
     }
 
     if (command != null) {
-      // _addToHistory('敵: $command');
+      // _addToHistory('敵: $command'); // デバッグ用
     }
 
     // プレイヤーのターンに移行
@@ -442,7 +445,7 @@ class _MkdirAppState extends State<MkdirApp> {
             ),
           ),
           SizedBox(
-            height: 140, // 履歴欄の高さ
+            height: historyHeight,
             child: ListView.builder(
               controller: _scrollController,
               itemCount: _history.length,
@@ -458,7 +461,7 @@ class _MkdirAppState extends State<MkdirApp> {
               color: Colors.green, // 入力文字の色
             ),
             decoration: const InputDecoration(
-              hintText: 'mkdir:作成, rm:削除, cd:移動, exit:終了',
+              hintText: 'mkdir:作成, rm:削除, cd:移動, ls:表示, exit:終了',
               hintStyle: TextStyle(color: Colors.green), // プレースホルダーの色
             ),
             onSubmitted: _handlePlayerCommand,
