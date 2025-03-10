@@ -10,11 +10,11 @@
 		</data>
 		<key>Resources/flutter_assets/AssetManifest.bin</key>
 		<data>
-		ME0cAg6cl/bTZmwXEVgMugDccUI=
+		6kDf8OkgL+fegIZ+CuEAgY1JfsY=
 		</data>
 		<key>Resources/flutter_assets/AssetManifest.json</key>
 		<data>
-		oG5/OGn+vw7vp/nu5DUDoZJ4nFc=
+		gg3mEP5vz6MP/5MBD3hBrwFaULQ=
 		</data>
 		<key>Resources/flutter_assets/FontManifest.json</key>
 		<data>
@@ -22,7 +22,11 @@
 		</data>
 		<key>Resources/flutter_assets/NOTICES.Z</key>
 		<data>
-		QvWtvkHcYdtrbszOhxaDMCuhn1w=
+		nNbxxpVtIoxYVf757cP+nEPBPvU=
+		</data>
+		<key>Resources/flutter_assets/assets/sounds/my_favorite_getaway.mp3</key>
+		<data>
+		Xu+Cbe1OOfKgVbCOGGBW9gsRpu8=
 		</data>
 		<key>Resources/flutter_assets/fonts/MaterialIcons-Regular.otf</key>
 		<data>
@@ -50,14 +54,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			AK9VrT1vIYmP534P8JLRoc2lLJQbaGDpko1FyK+MCV0=
+			eCWS0sILfcP70luYxJIVvSRiaZhHcuY6acqdBznYJbI=
 			</data>
 		</dict>
 		<key>Resources/flutter_assets/AssetManifest.json</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			Sps95+7JukayebvM0TLjL1LW1VXXndpKp/O8tOm9ZR8=
+			adAfBiebz/9CGzxYxdJ/9Bfwv5/rWG4mdxEp4SksTKY=
 			</data>
 		</dict>
 		<key>Resources/flutter_assets/FontManifest.json</key>
@@ -71,7 +75,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			L/j/4GlLOHpWNBnJ94PKkUGq1s3vXuuo73MfbtivG5w=
+			Qbd6uhkt4YGKLfJt8/Cw0586m+H77YXeJGlVD+Kbn4A=
+			</data>
+		</dict>
+		<key>Resources/flutter_assets/assets/sounds/my_favorite_getaway.mp3</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			/5rDWrHTGfbmCsGM6Noxxkf8z6wdUZfjjn4JB7mCKmA=
 			</data>
 		</dict>
 		<key>Resources/flutter_assets/fonts/MaterialIcons-Regular.otf</key>

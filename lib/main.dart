@@ -1,9 +1,16 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';// KeyEvent を扱うために必要
+import 'package:audioplayers/audioplayers.dart'; //BGM, 効果音
+import 'package:shared_preferences/shared_preferences.dart';
+
+final player = AudioPlayer();
 
 void main() {
   runApp(const MyApp());
+
+  player.setReleaseMode(ReleaseMode.loop);
+  player.play(AssetSource('sounds/my_favorite_getaway.mp3'));
 }
 
 class MyApp extends StatelessWidget {
@@ -14,16 +21,15 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        scaffoldBackgroundColor: Colors.black, // 背景を黒に設定
+        scaffoldBackgroundColor: Colors.black,
         textTheme: const TextTheme(
-          bodyMedium: TextStyle(color: Colors.white), // デフォルトのテキスト色を白に設定
+          bodyMedium: TextStyle(color: Colors.white),
         ),
       ),
       home: const TitleScreen(),
     );
   }
 }
-
 
 class TitleScreen extends StatefulWidget {
   const TitleScreen({super.key});
@@ -40,20 +46,27 @@ class _TitleScreenState extends State<TitleScreen> {
     super.initState();
     _focusNode = FocusNode();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _focusNode.requestFocus(); // 画面表示後にフォーカスを与える
+      _focusNode.requestFocus();
     });
   }
 
   @override
   void dispose() {
-    _focusNode.dispose(); // メモリリーク防止のために破棄
+    _focusNode.dispose();
     super.dispose();
   }
 
-  void _navigateToNextScreen(BuildContext context) {
+  void _navigateToMkdirApp(BuildContext context) {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const MkdirApp()),
+    );
+  }
+
+  void _navigateToSettingsScreen(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const SettingsScreen()),
     );
   }
 
@@ -62,10 +75,13 @@ class _TitleScreenState extends State<TitleScreen> {
     return Scaffold(
       body: KeyboardListener(
         focusNode: _focusNode,
-        autofocus: true, // 自動的にフォーカスを設定
+        autofocus: true,
         onKeyEvent: (KeyEvent event) {
+          if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyE) {
+            _navigateToMkdirApp(context);
+          }
           if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyS) {
-            _navigateToNextScreen(context);
+            _navigateToSettingsScreen(context);
           }
         },
         child: Center(
@@ -82,9 +98,17 @@ class _TitleScreenState extends State<TitleScreen> {
               ),
               const SizedBox(height: 40),
               ElevatedButton(
-                onPressed: () => _navigateToNextScreen(context),
+                onPressed: () => _navigateToMkdirApp(context),
                 child: const Text(
-                  '始める[s]',
+                  '始める[e]',
+                  style: TextStyle(fontSize: 20),
+                ),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () => _navigateToSettingsScreen(context),
+                child: const Text(
+                  '設定[s]',
                   style: TextStyle(fontSize: 20),
                 ),
               ),
@@ -95,6 +119,119 @@ class _TitleScreenState extends State<TitleScreen> {
     );
   }
 }
+
+class SettingsScreen extends StatefulWidget {
+  const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  double _volume = 1.0;
+  late FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVolume();
+    _focusNode = FocusNode();
+
+    // 画面表示後にキーボード入力を受け付ける
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusNode.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  // SharedPreferencesから音量を読み込む
+  Future<void> _loadVolume() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _volume = prefs.getDouble('bgm_volume') ?? 1.0;
+    });
+  }
+
+  // 音量を変更し、AudioPlayerとSharedPreferencesに反映
+  void _changeVolume(double value) async {
+    if (value < 0.0) value = 0.0;
+    if (value > 1.0) value = 1.0;
+
+    setState(() {
+      _volume = value;
+    });
+
+    // AudioPlayerの音量変更
+    player.setVolume(value);
+
+    // SharedPreferencesに音量を保存
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('bgm_volume', value);
+  }
+
+  // 戻る処理
+  void _goBack() {
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        title: const Text('設定画面'),
+      ),
+      body: KeyboardListener(
+        focusNode: _focusNode,
+        autofocus: true,
+        onKeyEvent: (KeyEvent event) {
+          // 「sキー」で戻る
+          if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyS) {
+            _goBack();
+          }
+
+          // 「→キー」で音量UP (+0.1)
+          if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowRight) {
+            _changeVolume(_volume + 0.1);
+          }
+
+          // 「←キー」で音量DOWN (-0.1)
+          if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+            _changeVolume(_volume - 0.1);
+          }
+        },
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('BGM音量'),
+              Slider(
+                value: _volume,
+                min: 0.0,
+                max: 1.0,
+                divisions: 10,
+                label: '${(_volume * 100).round()}%',
+                onChanged: _changeVolume,
+              ),
+              ElevatedButton(
+                onPressed: _goBack,
+                child: const Text('戻る [s]'),
+              ),
+              const SizedBox(height: 20),
+              const Text('音量変更：← / →'),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 
 class MkdirApp extends StatefulWidget {
   const MkdirApp({super.key});
@@ -188,18 +325,26 @@ class _MkdirAppState extends State<MkdirApp> {
 
     if (mkdirRegex.hasMatch(input)) {
       String dirName = mkdirRegex.firstMatch(input)!.group(1)!;
+      bool isSpace = false;
       if (_stagedItems.values.contains(dirName)) {
         _addToHistory('エラー: "$dirName" は既に存在しています。');
       } else {
         setState(() {
-          for (int i = 0; i < 100; i++) {
+          for (int i = 0; i < totalSquares; i++) {
             if (_stagedItems[i] == null) {
               _stagedItems[i] = dirName;
               break;
             }
+            if(i==totalSquares-1){
+              isSpace = true;
+            }
           }
         });
-        _addToHistory('プレイヤー: mkdir $dirName');
+        if(isSpace){
+          _addToHistory('エラー: "$dirName"を配置するスペースが存在しません。');
+        }else{
+          _addToHistory('プレイヤー: mkdir $dirName');
+        }
       }
     } else if (rmRegex.hasMatch(input)) {
       String dirName = rmRegex.firstMatch(input)!.group(1)!;
@@ -309,7 +454,7 @@ class _MkdirAppState extends State<MkdirApp> {
     }
 
     if (command != null) {
-      // _addToHistory('敵: $command'); // デバッグ用
+      _addToHistory('敵: $command'); // デバッグ用
     }
 
     // プレイヤーのターンに移行
@@ -324,26 +469,6 @@ class _MkdirAppState extends State<MkdirApp> {
       gameResult = result;
     });
   }
-
-  // void _showErrorDialog({required String message}) {
-  //   // エラーメッセージを履歴に追加
-  //   _addToHistory('エラー: $message');
-  //
-  //   showDialog(
-  //     context: context,
-  //     builder: (context) => AlertDialog(
-  //       title: Text('エラー'),
-  //       content: Text(message),
-  //       actions: [
-  //         TextButton(
-  //           onPressed: () => Navigator.of(context).pop(),
-  //           child: Text('OK'),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
-
 
   @override
   Widget build(BuildContext context) {
