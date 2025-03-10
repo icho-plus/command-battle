@@ -23,10 +23,10 @@
 		<dict>
 			<key>cdhash</key>
 			<data>
-			3lmqfN5ztNUHKLvrpH4hOdaVBxc=
+			mmoMUz4Bgz1IV/W4ITuLmOf/kkw=
 			</data>
 			<key>requirement</key>
-			<string>cdhash H"de59aa7cde73b4d50728bbeba47e2139d6950717" or cdhash H"a437ac868e37440b1661e45faa597eeeb82b4fff"</string>
+			<string>cdhash H"9a6a0c533e01833d4857f5b8213b8b98e7ff924c" or cdhash H"71cfdeaf99a20a2b2b21ae3c0d856ac3b309eafd"</string>
 		</dict>
 		<key>Frameworks/FlutterMacOS.framework</key>
 		<dict>
@@ -36,6 +36,24 @@
 			</data>
 			<key>requirement</key>
 			<string>cdhash H"ed35a56d5759d4d239dbf9c90a9d3776d3af47fd" or cdhash H"7335ed9ba0415e83ba934a9facfbcb1cd9093583"</string>
+		</dict>
+		<key>Frameworks/audioplayers_darwin.framework</key>
+		<dict>
+			<key>cdhash</key>
+			<data>
+			/PaEjn12ugHEuwLbRzR1nZtwkNc=
+			</data>
+			<key>requirement</key>
+			<string>cdhash H"fcf6848e7d76ba01c4bb02db4734759d9b7090d7" or cdhash H"759f75b66f2a9675e09190ee5103a3ff7e704bd8"</string>
+		</dict>
+		<key>Frameworks/libswiftAVFoundation.dylib</key>
+		<dict>
+			<key>cdhash</key>
+			<data>
+			vG/+wrcE2vnxenLi//6PdPbBnnI=
+			</data>
+			<key>requirement</key>
+			<string>cdhash H"feb2b00ea35babbf1f8ecd2b9dd7c3523b8dd2e3" or cdhash H"bc6ffec2b704daf9f17a72e2fffe8f74f6c19e72"</string>
 		</dict>
 		<key>Frameworks/libswiftAppKit.dylib</key>
 		<dict>
@@ -198,6 +216,24 @@
 			</data>
 			<key>requirement</key>
 			<string>cdhash H"a91aa60521c71dd382e53441689bc0970469be1b" or cdhash H"ca87afcd93734a35a742a2182e65dd77f0e11af4"</string>
+		</dict>
+		<key>Frameworks/path_provider_foundation.framework</key>
+		<dict>
+			<key>cdhash</key>
+			<data>
+			V2MyY02TTgJmEGgzs6tjsYeSCPA=
+			</data>
+			<key>requirement</key>
+			<string>cdhash H"576332634d934e0266106833b3ab63b1879208f0" or cdhash H"d002341669d21378435f66acd2f014925cc3c5fa"</string>
+		</dict>
+		<key>Frameworks/shared_preferences_foundation.framework</key>
+		<dict>
+			<key>cdhash</key>
+			<data>
+			4Cz0GrG9zFvgVvehb0Vzs4RPrzM=
+			</data>
+			<key>requirement</key>
+			<string>cdhash H"e02cf41ab1bdcc5be056f7a16f4573b3844faf33" or cdhash H"8f8247dd0064197375c0e7ecbb08bcd22e02329c"</string>
 		</dict>
 		<key>Resources/AppIcon.icns</key>
 		<dict>
