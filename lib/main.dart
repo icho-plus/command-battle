@@ -1,10 +1,13 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';// KeyEvent を扱うために必要
-import 'package:audioplayers/audioplayers.dart'; //BGM, 効果音
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:audioplayers/audioplayers.dart'; // BGM, 効果音
+import 'package:shared_preferences/shared_preferences.dart';// 設定を保存
 
-final player = AudioPlayer();
+final player = AudioPlayer(); // BGM
+const double sizedBox20 = 20;
+const double fontSize20 = 20;
+const double fontSize36 = 36;
 
 void main() {
   runApp(const MyApp());
@@ -62,7 +65,12 @@ class _TitleScreenState extends State<TitleScreen> {
       MaterialPageRoute(builder: (context) => const MkdirApp()),
     );
   }
-
+  void _navigateToRankingScreen(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const RankingScreen()),
+    );
+  }
   void _navigateToSettingsScreen(BuildContext context) {
     Navigator.push(
       context,
@@ -80,37 +88,32 @@ class _TitleScreenState extends State<TitleScreen> {
           if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyE) {
             _navigateToMkdirApp(context);
           }
+          if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyR) {
+            _navigateToRankingScreen(context);
+          }
           if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyS) {
             _navigateToSettingsScreen(context);
           }
         },
-        child: Center(
+        child: const Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text(
+              Text(
                 'COMMAND BATTLE',
                 style: TextStyle(
-                  fontSize: 36,
+                  fontSize: fontSize36,
                   fontWeight: FontWeight.bold,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 40),
-              ElevatedButton(
-                onPressed: () => _navigateToMkdirApp(context),
-                child: const Text(
-                  '始める[e]',
-                  style: TextStyle(fontSize: 20),
+              SizedBox(height: fontSize36),
+              Text(
+                '始める[e]\nランキング[r]\n設定[s]',
+                style: TextStyle(
+                  fontSize: fontSize20,
                 ),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () => _navigateToSettingsScreen(context),
-                child: const Text(
-                  '設定[s]',
-                  style: TextStyle(fontSize: 20),
-                ),
+                textAlign: TextAlign.center,
               ),
             ],
           ),
@@ -128,6 +131,9 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  final double _maxVolume = 1.0;
+  final double _minVolume = 0.0;
+  final double _volumeStep = 0.1;
   double _volume = 1.0;
   late FocusNode _focusNode;
 
@@ -153,14 +159,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _loadVolume() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _volume = prefs.getDouble('bgm_volume') ?? 1.0;
+      _volume = prefs.getDouble('bgm_volume') ?? _maxVolume;
     });
   }
 
   // 音量を変更し、AudioPlayerとSharedPreferencesに反映
   void _changeVolume(double value) async {
-    if (value < 0.0) value = 0.0;
-    if (value > 1.0) value = 1.0;
+    if (value < _minVolume) value = _minVolume;
+    if (value > _maxVolume) value = _maxVolume;
 
     setState(() {
       _volume = value;
@@ -183,8 +189,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        title: const Text('設定([s]でもどる)'),
         backgroundColor: Colors.black,
-        title: const Text('設定画面'),
+        foregroundColor: Colors.white,
       ),
       body: KeyboardListener(
         focusNode: _focusNode,
@@ -196,13 +203,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           }
 
           // 「→キー」で音量UP (+0.1)
-          if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowRight) {
-            _changeVolume(_volume + 0.1);
+          if (event is KeyDownEvent && (event.logicalKey == LogicalKeyboardKey.keyD || event.logicalKey == LogicalKeyboardKey.arrowRight)) {
+            _changeVolume(_volume + _volumeStep);
           }
 
           // 「←キー」で音量DOWN (-0.1)
-          if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-            _changeVolume(_volume - 0.1);
+          if (event is KeyDownEvent && (event.logicalKey == LogicalKeyboardKey.keyA || event.logicalKey == LogicalKeyboardKey.arrowLeft)) {
+            _changeVolume(_volume - _volumeStep);
           }
         },
         child: Center(
@@ -212,18 +219,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const Text('BGM音量'),
               Slider(
                 value: _volume,
-                min: 0.0,
-                max: 1.0,
+                min: _minVolume,
+                max: _maxVolume,
                 divisions: 10,
                 label: '${(_volume * 100).round()}%',
                 onChanged: _changeVolume,
               ),
-              ElevatedButton(
-                onPressed: _goBack,
-                child: const Text('戻る [s]'),
-              ),
-              const SizedBox(height: 20),
-              const Text('音量変更：← / →'),
+              const SizedBox(height: sizedBox20),
+              const Text('音量変更：a[←] / d[→]'),
             ],
           ),
         ),
@@ -232,6 +235,94 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 }
 
+class RankingScreen extends StatefulWidget {
+  const RankingScreen({super.key});
+
+  @override
+  State<RankingScreen> createState() => _RankingScreenState();
+}
+
+class _RankingScreenState extends State<RankingScreen> {
+  List<Map<String, String>> scores = [];
+  late FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode = FocusNode();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusNode.requestFocus(); // 画面表示後にフォーカスをセット
+    });
+    _loadScores();
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose(); // メモリリーク防止
+    super.dispose();
+  }
+
+  Future<void> _loadScores() async {
+    final prefs = await SharedPreferences.getInstance();
+    final List<String>? scoreEntries = prefs.getStringList('scores');
+
+    if (scoreEntries != null) {
+      setState(() {
+        scores = scoreEntries.map((entry) {
+          List<String> parts = entry.split(',');
+          return {'score': parts[0], 'date': parts[1]}; // スコアと日付を分離
+        }).toList()
+          ..sort((b, a) => int.parse(a['score']!).compareTo(int.parse(b['score']!))); // スコア降順ソート
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('ランキグン([r]でもどる)'),
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+      ),
+      body: KeyboardListener(
+        focusNode: _focusNode,
+        autofocus: true,
+        onKeyEvent: (KeyEvent event) {
+          if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyR) {
+            Navigator.pop(context); // Rキーで戻る
+          }
+        },
+        child: Center(
+          child: scores.isEmpty
+              ? const Text(
+            'no scores',
+            style: TextStyle(fontSize: fontSize20, color: Colors.white),
+          )
+              : ListView.builder(
+            itemCount: scores.length > 5 ? 5 : scores.length,
+            itemBuilder: (context, index) {
+              return ListTile(
+                leading: Text(
+                  '${index + 1}位',
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                title: Text(
+                  '${scores[index]['score']} 点',
+                  style: const TextStyle(fontSize: fontSize20, color: Colors.white),
+                ),
+                subtitle: Text(
+                  scores[index]['date']!,
+                  style: const TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class MkdirApp extends StatefulWidget {
   const MkdirApp({super.key});
@@ -246,15 +337,17 @@ class _MkdirAppState extends State<MkdirApp> {
   final FocusNode _keyboardFocusNode = FocusNode(); // キーボードイベント用
   final List<String> _history = [];
   final ScrollController _scrollController = ScrollController();
-  final int totalSquares = 21; // 四角形の総数
-  final int crossAxisCount = 7; // 1行に表示する四角形の数
-  final double crossAxisSpacing = 4; // 列間の間隔
-  final double mainAxisSpacing = 4; // 行間の間隔
-  final double historyHeight = 140; // 履歴欄の高さ
+  final int _totalSquares = 21; // 四角形の総数
+  final int _crossAxisCount = 7; // 1行に表示する四角形の数
+  final double _crossAxisSpacing = 4; // 列間の間隔
+  final double _mainAxisSpacing = 4; // 行間の間隔
+  final double _historyHeight = 140; // 履歴欄の高さ
   final Map<int, String?> _stagedItems = {}; // 状態変更を一時的に保持
+  final int _alphaOffset = 97;
 
   int playerPosition = 0;
   int enemyPosition = 0;
+  int score = 0;
   bool isGameOver = false;
   bool isPlayerTurn = true;
   String gameResult = '';
@@ -285,9 +378,10 @@ class _MkdirAppState extends State<MkdirApp> {
       _items.clear();
       _stagedItems.clear();
       _history.clear();
+      score = 0;
 
       // 初期の四角形を作成
-      List<String> alphabet = List.generate(totalSquares, (index) => String.fromCharCode(97 + index));
+      List<String> alphabet = List.generate(_totalSquares, (index) => String.fromCharCode(index+_alphaOffset));
       for (int i = 0; i < alphabet.length; i++) {
         _stagedItems[i] = alphabet[i];
       }
@@ -298,7 +392,7 @@ class _MkdirAppState extends State<MkdirApp> {
 
       Random random = Random();
       do {
-        enemyPosition = random.nextInt(totalSquares); // 敵はランダム位置
+        enemyPosition = random.nextInt(_totalSquares); // 敵はランダム位置
       } while (enemyPosition == playerPosition); // プレイヤーの位置と被らないように
     });
   }
@@ -314,7 +408,19 @@ class _MkdirAppState extends State<MkdirApp> {
     });
   }
 
+  void _changeScore(int change){
+    score += change;
+  }
+
+  final int _defeatScore= -10000;
+
   void _handlePlayerCommand(String input) {
+    const int mkdirScore = 500;
+    const int rmScore = 500;
+    const int cdScore = 100;
+    const int errorScore = -1000;
+    const int winScore = 10000;
+
     if (isGameOver || !isPlayerTurn) return;
 
     final mkdirRegex = RegExp(r'^mkdir\s+(.+)$');
@@ -327,20 +433,23 @@ class _MkdirAppState extends State<MkdirApp> {
       String dirName = mkdirRegex.firstMatch(input)!.group(1)!;
       bool isSpace = false;
       if (_stagedItems.values.contains(dirName)) {
+        _changeScore(errorScore);
         _addToHistory('エラー: "$dirName" は既に存在しています。');
       } else {
+        _changeScore(mkdirScore);
         setState(() {
-          for (int i = 0; i < totalSquares; i++) {
+          for (int i = 0; i < _totalSquares; i++) {
             if (_stagedItems[i] == null) {
               _stagedItems[i] = dirName;
               break;
             }
-            if(i==totalSquares-1){
+            if(i==_totalSquares-1){
               isSpace = true;
             }
           }
         });
         if(isSpace){
+          _changeScore(errorScore);
           _addToHistory('エラー: "$dirName"を配置するスペースが存在しません。');
         }else{
           _addToHistory('プレイヤー: mkdir $dirName');
@@ -349,11 +458,14 @@ class _MkdirAppState extends State<MkdirApp> {
     } else if (rmRegex.hasMatch(input)) {
       String dirName = rmRegex.firstMatch(input)!.group(1)!;
       if (_stagedItems.values.contains(dirName)) {
+        _changeScore(rmScore);
         setState(() {
           int targetIndex = _stagedItems.keys.firstWhere((index) => _stagedItems[index] == dirName);
           if (targetIndex == playerPosition) {
+            _changeScore(_defeatScore);
             _endGame('Defeat...');
           } else if (targetIndex == enemyPosition) {
+            _changeScore(winScore);
             _endGame('Win!');
           } else {
             _stagedItems[targetIndex] = null;
@@ -361,16 +473,24 @@ class _MkdirAppState extends State<MkdirApp> {
         });
         _addToHistory('プレイヤー: rm $dirName');
       } else {
+        _changeScore(errorScore);
         _addToHistory('エラー: "$dirName" は存在しません。');
       }
     } else if (cdRegex.hasMatch(input)) {
       String dirName = cdRegex.firstMatch(input)!.group(1)!;
       if (_stagedItems.values.contains(dirName)) {
+        for (int i = 0; i < _totalSquares; i++) {
+          if (_stagedItems[i] == null) {
+            _changeScore(cdScore);
+          }
+        }
+        //_changeScore(cdScore);
         setState(() {
           playerPosition = _stagedItems.keys.firstWhere((index) => _stagedItems[index] == dirName);
         });
         _addToHistory('プレイヤー: cd $dirName');
       } else {
+        _changeScore(errorScore);
         _addToHistory('エラー: "$dirName" は存在しません。');
       }
     }else if(lsRegex.hasMatch(input)){
@@ -384,6 +504,7 @@ class _MkdirAppState extends State<MkdirApp> {
         MaterialPageRoute(builder: (context) => const TitleScreen()), // タイトル画面に戻る
       );
     }else{
+      _changeScore(errorScore);
       _addToHistory('エラー: コマンドは以下の形式で入力してください:\n1. mkdir [名前]\n2. rm [名前]\n3. cd [名前]\n4. ls\n5. exit');
     }
 
@@ -417,7 +538,7 @@ class _MkdirAppState extends State<MkdirApp> {
       case 0: // mkdir
         if (availableIndexes.isNotEmpty) {
           int targetIndex = availableIndexes[random.nextInt(availableIndexes.length)];
-          String dirName = String.fromCharCode(targetIndex+97);
+          String dirName = String.fromCharCode(targetIndex+_alphaOffset);
           setState(() {
             _stagedItems[targetIndex] = dirName;
             command = 'mkdir $dirName';
@@ -431,6 +552,7 @@ class _MkdirAppState extends State<MkdirApp> {
           String? dirName = _stagedItems[targetIndex];
           setState(() {
             if (targetIndex == playerPosition) {
+              _changeScore(_defeatScore);
               _endGame('Defeat...');
             } else if (targetIndex == enemyPosition) {
               // 敵が自身の位置を削除しない
@@ -447,14 +569,15 @@ class _MkdirAppState extends State<MkdirApp> {
           int targetIndex = movableIndexes[random.nextInt(movableIndexes.length)];
           setState(() {
             enemyPosition = targetIndex;
-            command = 'cd ${_stagedItems[targetIndex]}';
+            command = 'cd';
+            // command = 'cd ${_stagedItems[targetIndex]}'; //デバッグ用
           });
         }
         break;
     }
 
     if (command != null) {
-      _addToHistory('敵: $command'); // デバッグ用
+      _addToHistory('敵: $command');
     }
 
     // プレイヤーのターンに移行
@@ -464,7 +587,23 @@ class _MkdirAppState extends State<MkdirApp> {
   }
 
   void _endGame(String result) {
+    // Future<void> resetScores() async {
+    //   final prefs = await SharedPreferences.getInstance();
+    //   await prefs.remove('scores');
+    // }
+    Future<void> saveScore(int newScore) async {
+      final prefs = await SharedPreferences.getInstance();
+      List<String> scoreEntries = prefs.getStringList('scores') ?? [];
+
+      String now = DateTime.now().toLocal().toString().split(' ')[0]; // "YYYY-MM-DD" 形式に変換
+      scoreEntries.add('$newScore,$now'); // スコアと日付を「,」で結合
+
+      await prefs.setStringList('scores', scoreEntries);
+    }
+
     setState(() {
+      //resetScores();
+      saveScore(score);
       isGameOver = true;
       gameResult = result;
     });
@@ -501,23 +640,19 @@ class _MkdirAppState extends State<MkdirApp> {
             children: [
               Text(
                 gameResult,
-                style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.white), // 白色
+                style: const TextStyle(fontSize: fontSize36, fontWeight: FontWeight.bold, color: Colors.white), // 白色
               ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () => Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => const TitleScreen()),
-                ),
-                child: const Text('タイトルに戻る[t]'),
+              Text(
+                "Score:$score点",
+                style: const TextStyle(fontSize: fontSize36, fontWeight: FontWeight.bold, color: Colors.white), // 白色
               ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () => Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => const MkdirApp()),
+              const SizedBox(height: fontSize20),
+              const Text(
+                'リトライ[r]\nタイトル[t]',
+                style: TextStyle(
+                  fontSize: fontSize20,
                 ),
-                child: const Text('もう一度遊ぶ[r]'),
+                textAlign: TextAlign.center,
               ),
             ],
           ),
@@ -530,17 +665,28 @@ class _MkdirAppState extends State<MkdirApp> {
         title: const Text('COMMAND BATTLE'),
         backgroundColor: Colors.black, // AppBarの背景色を黒に設定
         foregroundColor: Colors.white, // 戻るボタンやアイコンの色を白に設定
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: Center(
+              child: Text(
+                'Score: $score',
+                style: const TextStyle(fontSize: fontSize20, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ],
       ),
       body: Column(
         children: [
           Expanded(
             child: GridView.builder(
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: crossAxisCount, // 四角形を縮小するために列の数を増やす
-                crossAxisSpacing: crossAxisSpacing, // 列間の間隔
-                mainAxisSpacing: mainAxisSpacing, // 行間の間隔
+                crossAxisCount: _crossAxisCount, // 四角形を縮小するために列の数を増やす
+                crossAxisSpacing: _crossAxisSpacing, // 列間の間隔
+                mainAxisSpacing: _mainAxisSpacing, // 行間の間隔
               ),
-              itemCount: totalSquares,
+              itemCount: _totalSquares,
               itemBuilder: (context, index) {
                 Color squareColor = Colors.grey[300]!;
                 if (index == playerPosition) {
@@ -559,7 +705,7 @@ class _MkdirAppState extends State<MkdirApp> {
                     child: Text(
                       _items[index] ?? '',
                       style: const TextStyle(
-                          fontSize: 14,
+                          fontSize: fontSize20,
                           color: Colors.black, //四角形のテキストの色
                       ),
 
@@ -570,7 +716,7 @@ class _MkdirAppState extends State<MkdirApp> {
             ),
           ),
           SizedBox(
-            height: historyHeight,
+            height: _historyHeight,
             child: ListView.builder(
               controller: _scrollController,
               itemCount: _history.length,
@@ -586,7 +732,7 @@ class _MkdirAppState extends State<MkdirApp> {
               color: Colors.green, // 入力文字の色
             ),
             decoration: const InputDecoration(
-              hintText: 'mkdir:作成, rm:削除, cd:移動, ls:表示, exit:終了',
+              hintText: 'mkdir:作成, rm:削除, cd:移動, ls:表示, exit:中断',
               hintStyle: TextStyle(color: Colors.green), // プレースホルダーの色
             ),
             onSubmitted: _handlePlayerCommand,
